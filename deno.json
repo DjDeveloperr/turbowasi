@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "build": "clang -O3 -shared -Wall -owasi.dylib ./src/unix.c ./src/win32.c"
+  }
+}
