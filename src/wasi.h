@@ -26,6 +26,26 @@ typedef u32 wasi_ptr;
 typedef u64 wasi_device;
 typedef u64 wasi_inode;
 typedef u64 wasi_linkcount;
+typedef u64 wasi_dircookie;
+typedef u32 wasi_dirnamlen;
+
+typedef enum wasi_filetype: unsigned char {
+  WASI_FILETYPE_UNKNOWN = 0,
+  WASI_FILETYPE_BLOCK_DEVICE = 1,
+  WASI_FILETYPE_CHARACTER_DEVICE = 2,
+  WASI_FILETYPE_DIRECTORY = 3,
+  WASI_FILETYPE_REGULAR_FILE = 4,
+  WASI_FILETYPE_SOCKET_DGRAM = 5,
+  WASI_FILETYPE_SOCKET_STREAM = 6,
+  WASI_FILETYPE_SYMBOLIC_LINK = 7,
+} wasi_filetype;
+
+typedef struct wasi_dirent {
+  wasi_dircookie d_next;
+  wasi_inode ino;
+  wasi_dirnamlen namlen;
+  wasi_filetype type;
+} wasi_dirent;
 
 typedef struct wasi_iovec
 {
@@ -38,17 +58,6 @@ typedef struct wasi_ciovec
   const wasi_ptr buf;
   wasi_filesize buf_len;
 } wasi_ciovec;
-
-typedef enum wasi_filetype: unsigned char {
-  WASI_FILETYPE_UNKNOWN = 0,
-  WASI_FILETYPE_BLOCK_DEVICE = 1,
-  WASI_FILETYPE_CHARACTER_DEVICE = 2,
-  WASI_FILETYPE_DIRECTORY = 3,
-  WASI_FILETYPE_REGULAR_FILE = 4,
-  WASI_FILETYPE_SOCKET_DGRAM = 5,
-  WASI_FILETYPE_SOCKET_STREAM = 6,
-  WASI_FILETYPE_SYMBOLIC_LINK = 7,
-} wasi_filetype;
 
 typedef enum wasi_fdflags: u16 {
   WASI_FDFLAG_APPEND = 0x0001,

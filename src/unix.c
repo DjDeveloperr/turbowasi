@@ -5,6 +5,8 @@
 #include "fcntl.h"
 #include "unistd.h"
 #include "sys/stat.h"
+#include "dirent.h"
+#include "string.h"
 
 wasi_errno wasi_clock_res_get(wasi_clockid id, wasi_timestamp *offset)
 {
@@ -136,7 +138,7 @@ wasi_errno wasi_fd_pread(void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, was
   for (size_t i = 0; i < iovs_len; i++) {
     ssize_t n = pread(fd, base_ptr + iovs[i].buf, iovs[i].buf_len, offset);
     if (n < 0) {
-      return errno;
+      RET_MAP_ERRNO
     }
     total += n;
   }
@@ -160,7 +162,7 @@ wasi_errno wasi_fd_pwrite(void* base_ptr, wasi_fd fd, const wasi_ciovec *iovs, w
   for (size_t i = 0; i < iovs_len; i++) {
     ssize_t n = pwrite(fd, base_ptr + iovs[i].buf, iovs[i].buf_len, offset);
     if (n < 0) {
-      return errno;
+      RET_MAP_ERRNO
     }
     total += n;
   }
@@ -168,13 +170,13 @@ wasi_errno wasi_fd_pwrite(void* base_ptr, wasi_fd fd, const wasi_ciovec *iovs, w
   return WASI_SUCCESS;
 }
 
-wasi_errno wasi_fd_read(void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, wasi_size iovs_len, wasi_size *nread)
+wasi_errno wasi_fd_read(void* base_ptr, wasi_fd fd, const wasi_iovec* iovs, wasi_size iovs_len, wasi_size* nread)
 {
   size_t total = 0;
   for (size_t i = 0; i < iovs_len; i++) {
     ssize_t n = read(fd, base_ptr + iovs[i].buf, iovs[i].buf_len);
     if (n < 0) {
-      return errno;
+      RET_MAP_ERRNO;
     }
     total += n;
   }
@@ -182,7 +184,44 @@ wasi_errno wasi_fd_read(void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, wasi
   return WASI_SUCCESS;
 }
 
-wasi_errno wasi_fd_readdir(wasi_fd fd)
+wasi_errno wasi_fd_readdir(wasi_fd fd, wasi_dirent* buf, wasi_size buf_len, wasi_dircookie dircookie, wasi_size* nread)
 {
+  void* dir = fdopendir(fd);
+
+  if (dir == NULL) {
+    RET_MAP_ERRNO
+  }
+
+  seekdir(dir, dircookie);
   
+  errno = 0;
+  u32 consumed = 0;
+  while (consumed < buf_len) {
+    struct dirent* entry = readdir(dir);
+    if (entry == NULL && errno != 0) {
+      RET_MAP_ERRNO;
+    }
+
+    struct dirent dir_entry = *entry;
+    if (dir_entry.d_reclen + consumed >= buf_len) {
+      break;
+    }
+
+    struct wasi_dirent dirent;
+    dirent.d_next = dircookie++;
+    dirent.ino = dir_entry.d_ino;
+    dirent.namlen = dir_entry.d_reclen;
+    dirent.type = dir_entry.d_type;
+
+    *(buf + consumed) = dirent;
+    consumed += 24;
+    strcpy(dir_entry.d_name, (char*)(buf + consumed));
+    consumed += dir_entry.d_reclen;
+    // Align
+    consumed = (consumed + 8 - 1) &~(8 - 1);
+  }
+
+  *nread = consumed;
+
+  return WASI_SUCCESS;
 }
