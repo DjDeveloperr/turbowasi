@@ -13,7 +13,7 @@ const {
       parameters: ["u32", "buffer"],
       result: "u32",
     },
-  } as const,
+  },
 ).symbols;
 
 export function instanciateWasi(
