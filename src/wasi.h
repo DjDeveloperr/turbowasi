@@ -17,7 +17,7 @@
 typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long long u64;
-
+typedef long long s64;
 typedef u32 wasi_size;
 typedef u32 wasi_filesize;
 typedef u64 wasi_timestamp;
@@ -28,6 +28,13 @@ typedef u64 wasi_inode;
 typedef u64 wasi_linkcount;
 typedef u64 wasi_dircookie;
 typedef u32 wasi_dirnamlen;
+typedef s64 wasi_filedelta;
+
+typedef enum wasi_whence {
+  WASI_WHENCE_SET = 0,
+  WASI_WHENCE_CUR = 1,
+  WASI_WHENCE_END = 2,
+} wasi_whence;
 
 typedef enum wasi_filetype: unsigned char {
   WASI_FILETYPE_UNKNOWN = 0,
@@ -210,3 +217,7 @@ WASI_SYSCALL(fd_prestat_get) (wasi_fd fd, void *prestat);
 WASI_SYSCALL(fd_prestat_dir_name) (wasi_fd fd, char *path, wasi_size path_len);
 WASI_SYSCALL(fd_pwrite) (void* base_ptr, wasi_fd fd, const wasi_ciovec *iovs, wasi_size iovs_len, wasi_filesize offset, wasi_size *nwritten);
 WASI_SYSCALL(fd_read) (void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, wasi_size iovs_len, wasi_size *nread);
+WASI_SYSCALL(fd_dirread) (wasi_fd fd, wasi_dirent* buf, wasi_size buf_len, wasi_dircookie dircookie, wasi_size* nread);
+WASI_SYSCALL(fd_seek) (wasi_fd fd, wasi_filedelta offset, wasi_whence whence, wasi_filesize* pos);
+WASI_SYSCALL(fd_sync) (wasi_fd fd);
+WASI_SYSCALL(fd_tell) (wasi_fd fd, wasi_filesize* pos);

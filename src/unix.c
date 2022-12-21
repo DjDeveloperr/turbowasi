@@ -201,27 +201,58 @@ wasi_errno wasi_fd_readdir(wasi_fd fd, wasi_dirent* buf, wasi_size buf_len, wasi
     if (entry == NULL && errno != 0) {
       RET_MAP_ERRNO;
     }
-
-    struct dirent dir_entry = *entry;
-    if (dir_entry.d_reclen + consumed >= buf_len) {
+    // If record is too big or empty to fit then just return
+    if (entry == NULL || entry->d_reclen + 24 + consumed >= buf_len) {
       break;
     }
 
+    // Possible optimization: Don't copy twice
     struct wasi_dirent dirent;
     dirent.d_next = dircookie++;
-    dirent.ino = dir_entry.d_ino;
-    dirent.namlen = dir_entry.d_reclen;
-    dirent.type = dir_entry.d_type;
+    dirent.ino = entry->d_ino;
+    dirent.namlen = entry->d_reclen;
+    dirent.type = entry->d_type;
 
     *(buf + consumed) = dirent;
     consumed += 24;
-    strcpy(dir_entry.d_name, (char*)(buf + consumed));
-    consumed += dir_entry.d_reclen;
+    strcpy((char*)(buf + consumed), entry->d_name);
+    consumed += entry->d_reclen;
     // Align
     consumed = (consumed + 8 - 1) &~(8 - 1);
   }
 
   *nread = consumed;
+
+  return WASI_SUCCESS;
+}
+
+
+wasi_errno wasi_fd_seek(wasi_fd fd, wasi_filedelta offset, wasi_whence whence, wasi_filesize* pos)
+{
+  long int res = lseek(fd, offset, whence);
+  if (res == -1) {
+    RET_MAP_ERRNO;
+  }
+
+  *pos = res;
+
+  return WASI_SUCCESS;
+}
+
+wasi_errno wasi_fd_sync(wasi_fd fd)
+{
+  SYSCALL(fsync(fd));
+  return WASI_SUCCESS;
+}
+
+wasi_errno wasi_fd_tell(wasi_fd fd, wasi_filesize* pos)
+{
+  long int res = lseek(fd, 0, WASI_WHENCE_CUR);
+  if (res == -1) {
+    RET_MAP_ERRNO;
+  }
+
+  *pos = res;
 
   return WASI_SUCCESS;
 }
