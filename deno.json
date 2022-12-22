@@ -1,5 +1,7 @@
 {
   "tasks": {
-    "build": "clang -O3 -shared -Wall -owasi.dylib ./src/unix.c ./src/win32.c"
+    "build-linux": "clang -O3 -shared -Wall -olibwasi.so ./src/unix.c",
+    "build-win": "clang -O3 -shared -Wall -olibwasi.dll ./src/win32.c",
+    "build-all": "deno task build-linux & deno task build-win"
   }
 }

@@ -1,2 +1,7 @@
 .vscode/
 *.dylib
+*.so
+*.dll
+*.wasm
+*.wat
+*.lock

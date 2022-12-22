@@ -1,8 +1,115 @@
+#pragma once
+
+#include "stddef.h"
+
+#ifndef WASI_EXPORT
+  #if defined(_WIN32)
+    #define WASI_EXPORT __declspec(dllexport)
+  #else
+    #define WASI_EXPORT
+  #endif
+#endif
+
+#ifndef WASI_SYSCALL
+  #define WASI_SYSCALL(name) WASI_EXPORT wasi_errno wasi_##name
+#endif
+
+typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long long u64;
-
+typedef long long s64;
+typedef u32 wasi_size;
 typedef u32 wasi_filesize;
 typedef u64 wasi_timestamp;
+typedef u32 wasi_fd;
+typedef u32 wasi_ptr;
+typedef u64 wasi_device;
+typedef u64 wasi_inode;
+typedef u64 wasi_linkcount;
+typedef u64 wasi_dircookie;
+typedef u32 wasi_dirnamlen;
+typedef s64 wasi_filedelta;
+
+typedef enum wasi_whence {
+  WASI_WHENCE_SET = 0,
+  WASI_WHENCE_CUR = 1,
+  WASI_WHENCE_END = 2,
+} wasi_whence;
+
+typedef enum wasi_filetype: unsigned char {
+  WASI_FILETYPE_UNKNOWN = 0,
+  WASI_FILETYPE_BLOCK_DEVICE = 1,
+  WASI_FILETYPE_CHARACTER_DEVICE = 2,
+  WASI_FILETYPE_DIRECTORY = 3,
+  WASI_FILETYPE_REGULAR_FILE = 4,
+  WASI_FILETYPE_SOCKET_DGRAM = 5,
+  WASI_FILETYPE_SOCKET_STREAM = 6,
+  WASI_FILETYPE_SYMBOLIC_LINK = 7,
+} wasi_filetype;
+
+typedef struct wasi_dirent {
+  wasi_dircookie d_next;
+  wasi_inode ino;
+  wasi_dirnamlen namlen;
+  wasi_filetype type;
+} wasi_dirent;
+
+typedef struct wasi_iovec
+{
+  wasi_ptr buf;
+  wasi_filesize buf_len;
+} wasi_iovec;
+
+typedef struct wasi_ciovec
+{
+  const wasi_ptr buf;
+  wasi_filesize buf_len;
+} wasi_ciovec;
+
+typedef enum wasi_fdflags: u16 {
+  WASI_FDFLAG_APPEND = 0x0001,
+  WASI_FDFLAG_DSYNC = 0x0002,
+  WASI_FDFLAG_NONBLOCK = 0x0004,
+  WASI_FDFLAG_RSYNC = 0x0008,
+  WASI_FDFLAG_SYNC = 0x0010,
+} wasi_fdflags;
+
+typedef u64 wasi_rights;
+
+typedef struct wasi_fdstat {
+  wasi_filetype filetype;
+  wasi_fdflags fdflags;
+  wasi_rights rights_base;
+  wasi_rights rights_inheriting;
+} wasi_fdstat;
+
+typedef struct wasi_filestat {
+  wasi_device dev;
+  wasi_inode ino;
+  wasi_filetype filetype;
+  wasi_linkcount nlink;
+  wasi_filesize size;
+  wasi_timestamp atim;
+  wasi_timestamp mtim;
+  wasi_timestamp ctim;
+} wasi_filestat;
+
+typedef enum wasi_fstflags: u16 {
+  WASI_FSTFLAGS_ATIM = 0x0001,
+  WASI_FSTFLAGS_ATIM_NOW = 0x0002,
+  WASI_FSTFLAGS_MTIM = 0x0004,
+  WASI_FSTFLAGS_MTIM_NOW = 0x0008,
+} wasi_fstflags;
+
+typedef enum wasi_advise
+{
+  WASI_ADVISE_NORMAL = 0,
+  WASI_ADVISE_SEQUENTIAL = 1,
+  WASI_ADVISE_RANDOM = 2,
+  WASI_ADVISE_WILLNEED = 3,
+  WASI_ADVISE_DONTNEED = 4,
+  WASI_ADVISE_NOREUSE = 5
+} wasi_advise;
 
 typedef enum wasi_clockid
 {
@@ -92,3 +199,25 @@ typedef enum wasi_errno
   WASI_EXDEV = 75,
   WASI_ENOTCAPABLE = 76,
 } wasi_errno;
+
+WASI_SYSCALL(clock_res_get) (wasi_clockid id, wasi_timestamp *offset);
+WASI_SYSCALL(clock_time_get) (wasi_clockid id, wasi_timestamp *offset);
+WASI_SYSCALL(fd_advice) (wasi_fd fd, wasi_filesize offset, wasi_filesize len, wasi_advise advise);
+WASI_SYSCALL(fd_allocate) (wasi_fd fd, wasi_filesize offset, wasi_filesize len);
+WASI_SYSCALL(fd_close) (wasi_fd fd);
+WASI_SYSCALL(fd_datasync) (wasi_fd fd);
+WASI_SYSCALL(fd_fdstat_get) (wasi_fd fd, wasi_fdstat *stat);
+WASI_SYSCALL(fd_fdstat_set_flags) (wasi_fd fd, wasi_fdflags flags);
+WASI_SYSCALL(fd_fdstat_set_rights) (wasi_fd fd, wasi_rights rights_base, wasi_rights rights_inheriting);
+WASI_SYSCALL(fd_filestat_get) (wasi_fd fd, wasi_filestat *stat);
+WASI_SYSCALL(fd_filestat_set_size) (wasi_fd fd, wasi_filesize size);
+WASI_SYSCALL(fd_filestat_set_times) (wasi_fd fd, wasi_timestamp atim, wasi_timestamp mtim, wasi_fstflags flags);
+WASI_SYSCALL(fd_pread) (void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, wasi_size iovs_len, wasi_filesize offset, wasi_size *nread);
+WASI_SYSCALL(fd_prestat_get) (wasi_fd fd, void *prestat);
+WASI_SYSCALL(fd_prestat_dir_name) (wasi_fd fd, char *path, wasi_size path_len);
+WASI_SYSCALL(fd_pwrite) (void* base_ptr, wasi_fd fd, const wasi_ciovec *iovs, wasi_size iovs_len, wasi_filesize offset, wasi_size *nwritten);
+WASI_SYSCALL(fd_read) (void* base_ptr, wasi_fd fd, const wasi_iovec *iovs, wasi_size iovs_len, wasi_size *nread);
+WASI_SYSCALL(fd_dirread) (wasi_fd fd, wasi_dirent* buf, wasi_size buf_len, wasi_dircookie dircookie, wasi_size* nread);
+WASI_SYSCALL(fd_seek) (wasi_fd fd, wasi_filedelta offset, wasi_whence whence, wasi_filesize* pos);
+WASI_SYSCALL(fd_sync) (wasi_fd fd);
+WASI_SYSCALL(fd_tell) (wasi_fd fd, wasi_filesize* pos);
